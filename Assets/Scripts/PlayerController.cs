@@ -47,6 +47,12 @@ public class PlayerController : MonoBehaviour
     //AttackChica
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private Transform _shooter;
+    //Gravity
+    [SerializeField] private Transform _sensorPosition;
+    [SerializeField] private float _sensorRadius;
+    [SerializeField] private LayerMask _groundLayer;
+    [SerializeField] private float _gravity = -9.81f;
+    [SerializeField] Vector3 _playerGravity;
 
     void Awake()
     {
@@ -69,8 +75,10 @@ public class PlayerController : MonoBehaviour
     {
         _moveInput = _moveAction.ReadValue<Vector2>();
         _lookInput = _lookAction.ReadValue<Vector2>();
-        Movimiento();
         
+        Movimiento();
+        Gravity();
+
         if(_changeAction.WasPressedThisFrame() && _isChanging == false)
         {
             _isChanging = true;
@@ -130,7 +138,7 @@ public class PlayerController : MonoBehaviour
     {
         _dashing = true;
         _dashTimer = 0;
-        Physics.IgnoreLayerCollision(0, 3, true);
+        Physics.IgnoreLayerCollision(0, 6, true);
 
         Vector3 dashDirection = new Vector3(_moveInput.x, 0, _moveInput.y).normalized;
 
@@ -152,7 +160,7 @@ public class PlayerController : MonoBehaviour
             yield return null;
         }
 
-        Physics.IgnoreLayerCollision(0, 3, false);
+        Physics.IgnoreLayerCollision(0, 6, false);
         _dashing = false;
     }
 
@@ -176,5 +184,29 @@ public class PlayerController : MonoBehaviour
             yield return new WaitForSeconds(1);
             _isChanging = false;
         }
+    }
+
+    bool IsGrounded()
+    {
+        return Physics.CheckSphere(_sensorPosition.position, _sensorRadius, _groundLayer);
+    }
+
+    void Gravity()
+    {
+       if(!IsGrounded())
+        {
+            _playerGravity.y += _gravity * Time.deltaTime;
+        }
+        else if(IsGrounded() && _playerGravity.y < 0)
+        {
+            _playerGravity.y = _gravity;
+        }
+        _controller.Move(_playerGravity * Time.deltaTime);
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(_sensorPosition.position, _sensorRadius);
     }
 }
