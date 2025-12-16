@@ -47,6 +47,9 @@ public class PlayerController : MonoBehaviour
     //AttackChica
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private Transform _shooter;
+    private float ShootTimer;
+    private float ShootColdown = 0.1f;
+    private bool canShoot = true;
     //Gravity
     [SerializeField] private Transform _sensorPosition;
     [SerializeField] private float _sensorRadius;
@@ -86,13 +89,8 @@ public class PlayerController : MonoBehaviour
         }
         if(_AttackAction.WasPressedThisFrame())
         {
-            Attack();
+            StartCoroutine(Attack());
         }
-        if(_AttackAction.WasCompletedThisFrame())
-        {
-            Attack();
-        }
-
         if(_dashAction.WasPressedThisFrame() && _dashing == false)
         {
             StartCoroutine(Dash());
@@ -103,7 +101,7 @@ public class PlayerController : MonoBehaviour
     {
          Vector3 direction = new Vector3(_moveInput.x, 0, _moveInput.y);
 
-        /*Ray ray = Camera.main.ScreenPointToRay(_lookInput);
+        Ray ray = Camera.main.ScreenPointToRay(_lookInput);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, Mathf.Infinity))
@@ -111,7 +109,7 @@ public class PlayerController : MonoBehaviour
             Vector3 playerForward = hit.point - transform.position;
             playerForward.y = 0;
             transform.forward = playerForward;
-        }*/
+        }
 
         if (direction != Vector3.zero)
         {
@@ -122,13 +120,26 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void Attack()
+    IEnumerator Attack()
     {
-        if(_ChicaActive)
+        if(_ChicaActive && canShoot == true)
         {
-            Instantiate(projectilePrefab, _shooter.position, _shooter.rotation);
+            if(canShoot)
+            {
+                Instantiate(projectilePrefab, _shooter.position, _shooter.rotation);
+                canShoot = false;
+            }
+
+            while (ShootTimer < ShootColdown)
+            {
+                ShootTimer += Time.deltaTime;
+                yield return null;
+            }
+
+            ShootTimer = 0;
+            canShoot = true;
         }
-        if(_ChicoActive)
+        else if(_ChicoActive)
         {
             Debug.Log("Ataque Chico");
         }
@@ -137,20 +148,9 @@ public class PlayerController : MonoBehaviour
     IEnumerator Dash()
     {
         _dashing = true;
-        _dashTimer = 0;
         Physics.IgnoreLayerCollision(0, 6, true);
 
         Vector3 dashDirection = new Vector3(_moveInput.x, 0, _moveInput.y).normalized;
-
-        if (dashDirection == Vector3.zero)
-        {
-            while (_dashTimer < _dashDuration)
-            {
-                _dashDuration += Time.deltaTime;
-                _controller.Move(transform.forward * 1 * _dashSpeed * Time.deltaTime);
-                yield return null;
-            }
-        }
 
         while (_dashTimer < _dashDuration)
         {
@@ -161,6 +161,7 @@ public class PlayerController : MonoBehaviour
         }
 
         Physics.IgnoreLayerCollision(0, 6, false);
+        _dashTimer = 0;
         _dashing = false;
     }
 
